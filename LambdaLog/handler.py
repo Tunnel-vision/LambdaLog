@@ -37,7 +37,7 @@ class LambdaStreamHandler(StreamHandler):
         self.lock.acquire()
         try:
             msg = self.format(record)
-            print(msg)
+            #print(msg)
             stream = self.stream
             stream.insert_one(msg)
             self.flush()
