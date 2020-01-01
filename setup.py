@@ -5,7 +5,7 @@ __time__ = '2020/1/1 14:41'
 from distutils.core import setup
 
 setup(
-    name='',
+    name='LambdaLog',
     version='1.0.0',
     py_modules =['LambdaLog'],
     author='liuxin',
