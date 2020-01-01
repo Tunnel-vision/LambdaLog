@@ -4,6 +4,7 @@ __time__ = '2019/12/30 18:01'
 import logging
 import sys
 from collections import defaultdict
+from .log import LogRecord
 
 NAMESPACE = 'lambda'
 VERBOSE = 15
@@ -32,9 +33,6 @@ COLOR_MAP.update({
     logging.WARNING: 'darkred',
     logging.DEBUG: 'darkgray',
 })
-
-import logging
-from log import LogRecord
 
 _srcfile = logging._srcfile
 
@@ -70,7 +68,7 @@ class LambdaLoggerAdapter(logging.LoggerAdapter):
                 exc_info = (type(exc_info), exc_info, exc_info.__traceback__)
             elif not isinstance(exc_info, tuple):
                 exc_info = sys.exc_info()
-        record = self.makeRecord(self.name, level, fn, lno, msg, args,
+        record = self.makeRecord(self.logger.name, level, fn, lno, msg, args,
                                  exc_info, func, extra, sinfo)
         # record.created = 50
         self.logger.handle(record)

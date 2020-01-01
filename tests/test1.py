@@ -6,7 +6,7 @@ __time__ = '2019/12/31 10:11'
 from LambdaLog import LambdaLoggerAdapter
 import logging
 
-from handler import LambdaStreamHandler,TimedRotatingDBHandler,NumberRotatingDBHandler
+from LambdaLog.handler import NumberRotatingDBHandler
 
 HOST = "10.1.11.143"
 PORT = 27017

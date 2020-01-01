@@ -8,6 +8,7 @@ setup(
     name='LambdaLog',
     version='1.0.0',
     py_modules =['LambdaLog'],
+    packages=["LambdaLog"],
     author='liuxin',
     author_email='1002993703@qq.com',
     url='http://www.cgtn.com',
