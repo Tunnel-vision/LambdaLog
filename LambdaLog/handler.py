@@ -77,7 +77,7 @@ class LambdaStreamHandler(StreamHandler):
 
     def _open(self):
         myclient = pymongo.MongoClient("mongodb://{}:{}/".format(self.host, self.port))
-        mydb = myclient["lambdalog"]
+        mydb = myclient[self.db_name]
         client = mydb[self.name]
         return client
 
