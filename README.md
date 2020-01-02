@@ -3,14 +3,13 @@
 ### quick start
 ```
 import logging
-from LambdaLog import LambdaLoggerAdapter
-from LambdaLog.handler import LogHandlerFactory
 
-HOST = "127.0.0.1"
+from LambdaLog.handler import LogHandlerFactory
+HOST = "10.1.11.143"
 PORT = 27017
-logger = LambdaLoggerAdapter.getLogger(name="name")
-logger.setLevel("INFO") 
-lh = LogHandlerFactory(db_name="dbname",c_name=logger.logger.name,host=HOST,type="TIME", port=PORT,backup_count=10).create_handler()
+logger = logging.getLogger(name="req")
+logger.setLevel("INFO")
+lh = LogHandlerFactory(c_name=logger.name,host=HOST,type="TIME", port=PORT,backup_count=10).create_handler()
 lh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('[%(asctime)s] %(filename)s->%(funcName)s line:%(lineno)d [%(levelname)s]%(message)s')
 lh.setFormatter(formatter)

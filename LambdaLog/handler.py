@@ -6,7 +6,7 @@ from logging import StreamHandler
 import pymongo
 from datetime import datetime
 from logging import Formatter
-
+from LambdaLog.log import LogRecord
 _datetime_factory = datetime.utcnow
 
 
@@ -97,6 +97,7 @@ class LambdaStreamHandler(StreamHandler):
         #     self.lock.release()
 
     def format(self, record):
+        record = LogRecord.from_json(record.__dict__)
         record.message = record.getMessage()
         if self.formatter.usesTime():
             record.asctime = self.formatter.formatTime(record, self.formatter.datefmt)
