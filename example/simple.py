@@ -12,7 +12,7 @@ HOST = "10.1.11.143"
 PORT = 27017
 logger = LambdaLoggerAdapter.getLogger(name="req")
 logger.setLevel("INFO")
-lh = LogHandlerFactory(name=logger.logger.name,host=HOST,type="TIME", port=PORT,backup_count=10).create_handler()
+lh = LogHandlerFactory(c_name=logger.logger.name,host=HOST,type="TIME", port=PORT,backup_count=10).create_handler()
 lh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('[%(asctime)s] %(filename)s->%(funcName)s line:%(lineno)d [%(levelname)s]%(message)s')
 lh.setFormatter(formatter)

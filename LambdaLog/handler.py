@@ -22,9 +22,11 @@ class LogHandlerFactory(object):
         "STANDARD", 'TIME', 'NUMBER'
     ))
 
-    def __init__(self, name, host='localhost', port=27017, type=None, encoding=None, backup_count=5000,
+    def __init__(self, db_name="lambdalog", c_name="test", host='localhost', port=27017, type=None, encoding=None,
+                 backup_count=5000,
                  recycle_count=None, formatter=None, delay=False):
-        self._name = name
+        self.db_name = db_name
+        self._name = c_name
         self.host = host
         self.port = port
         self.encoding = encoding
@@ -42,12 +44,13 @@ class LogHandlerFactory(object):
     def create_handler(self, **kwargs):
         if self.enable_provided(self.type):
             if self.type == "STANDARD":
-                return LambdaStreamHandler(name=self._name, host=self.host, port=self.port, **kwargs)
+                return LambdaStreamHandler(db_name=self.db_name, c_name=self._name, host=self.host, port=self.port,
+                                           **kwargs)
             elif self.type == "TIME":
-                return TimedRotatingDBHandler(name=self._name, host=self.host, port=self.port,
+                return TimedRotatingDBHandler(db_name=self.db_name, c_name=self._name, host=self.host, port=self.port,
                                               backup_count=self.backup_count, **kwargs)
             elif self.type == "NUMBER":
-                return NumberRotatingDBHandler(name=self._name, host=self.host, port=self.port,
+                return NumberRotatingDBHandler(db_name=self.db_name, c_name=self._name, host=self.host, port=self.port,
                                                backup_count=self.backup_count, **kwargs)
         else:
             raise Exception("TYPE filed must be setup in [STANDARD, TIME, NUMBER]")
@@ -58,8 +61,10 @@ class LambdaStreamHandler(StreamHandler):
         日志流仅输出 mongodb数据库
     """
 
-    def __init__(self, name, host='localhost', port=27017, encoding=None, formatter=None, delay=False):
-        self._name = name
+    def __init__(self, db_name="lambdalog", c_name="test", host='localhost', port=27017, encoding=None,
+                 formatter=None, delay=False):
+        self.db_name = db_name
+        self._name = c_name
         self.host = host
         self.port = port
         self.encoding = encoding
@@ -126,9 +131,9 @@ class TimedRotatingDBHandler(LambdaStreamHandler):
         日志流输出 mongodb数据库，并基于时间做旋转
     """
 
-    def __init__(self, name, host='localhost', port=27017, encoding=None, backup_count=5,
+    def __init__(self, db_name="lambdalog", c_name="test", host='localhost', port=27017, encoding=None, backup_count=5,
                  date_format='%Y-%m-%d', formatter=None, delay=False):
-        LambdaStreamHandler.__init__(self, name, host, port, encoding, formatter=formatter, delay=delay)
+        LambdaStreamHandler.__init__(self, db_name, c_name, host, port, encoding, formatter=formatter, delay=delay)
         self.date_format = date_format
         self.backup_time = backup_count * 24 * 60 * 60
         self._timestamp = self._get_timestamp()
@@ -136,7 +141,7 @@ class TimedRotatingDBHandler(LambdaStreamHandler):
     def _get_timestamp(self, ):
         import time
         result = self.get_min_time_by_db()
-        return result["created"] if "created" in result else time.time()
+        return result["created"] if result and "created" in result else time.time()
 
     def perform_rollover(self, new_timestamp):
         # 清楚 过期的
@@ -160,11 +165,12 @@ class NumberRotatingDBHandler(LambdaStreamHandler):
         日志流输出 mongodb数据库，并基于条数做旋转
     """
 
-    def __init__(self, name, host='localhost', port=27017, encoding=None, backup_count=5000, recycle_count=None,
+    def __init__(self, db_name="lambdalog", c_name="test", host='localhost', port=27017, encoding=None,
+                 backup_count=5000, recycle_count=None,
                  formatter=None, delay=False):
         self.backup_count = backup_count
         self.recycle_count = recycle_count or int(self.backup_count / 10)
-        LambdaStreamHandler.__init__(self, name, host, port, encoding, formatter=formatter, delay=delay)
+        LambdaStreamHandler.__init__(self, db_name, c_name, host, port, encoding, formatter=formatter, delay=delay)
 
     def perform_rollover(self):
         conditions = {"count": self.recycle_count}
