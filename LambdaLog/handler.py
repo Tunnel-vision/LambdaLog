@@ -5,20 +5,66 @@ import logging
 from logging import StreamHandler
 import pymongo
 from datetime import datetime
-from logging import _defaultFormatter
+from logging import Formatter
 
 _datetime_factory = datetime.utcnow
 
 
-class LambdaStreamHandler(StreamHandler):
+class LogHandlerFactory(object):
+    """
+        创建基于mongodb的日志流 handler
+        目前支持三种 handler 行为
+        STANDARD: 日志流仅输出 mongodb数据库
+        TIME:     日志流输出 mongodb数据库，并基于时间做旋转
+        NUMBER:   日志流输出 mongodb数据库，并基于条数做旋转
+    """
+    _provided_type = frozenset((
+        "STANDARD", 'TIME', 'NUMBER'
+    ))
 
-    def __init__(self, name, host='localhost', port=27017, encoding=None, formatrer=None, delay=False):
+    def __init__(self, name, host='localhost', port=27017, type=None, encoding=None, backup_count=5000,
+                 recycle_count=None, formatter=None, delay=False):
         self._name = name
         self.host = host
         self.port = port
         self.encoding = encoding
         self.delay = delay
-        self.formatter = formatrer or _defaultFormatter
+        self.type = type
+        self.backup_count = backup_count
+        self.recycle_count = recycle_count
+        self.formatter = formatter
+
+    def enable_provided(self, _type):
+        if _type not in self._provided_type:
+            return False
+        return True
+
+    def create_handler(self, **kwargs):
+        if self.enable_provided(self.type):
+            if self.type == "STANDARD":
+                return LambdaStreamHandler(name=self._name, host=self.host, port=self.port, **kwargs)
+            elif self.type == "TIME":
+                return TimedRotatingDBHandler(name=self._name, host=self.host, port=self.port,
+                                              backup_count=self.backup_count, **kwargs)
+            elif self.type == "NUMBER":
+                return NumberRotatingDBHandler(name=self._name, host=self.host, port=self.port,
+                                               backup_count=self.backup_count, **kwargs)
+        else:
+            raise Exception("TYPE filed must be setup in [STANDARD, TIME, NUMBER]")
+
+
+class LambdaStreamHandler(StreamHandler):
+    """
+        日志流仅输出 mongodb数据库
+    """
+
+    def __init__(self, name, host='localhost', port=27017, encoding=None, formatter=None, delay=False):
+        self._name = name
+        self.host = host
+        self.port = port
+        self.encoding = encoding
+        self.delay = delay
+        self.formatter = formatter or Formatter()
         if delay:
             logging.Handler.__init__(self)
         else:
@@ -34,17 +80,16 @@ class LambdaStreamHandler(StreamHandler):
         pass
 
     def emit(self, record):
-        self.lock.acquire()
+        # self.lock.acquire()
         try:
             msg = self.format(record)
-            #print(msg)
             stream = self.stream
             stream.insert_one(msg)
             self.flush()
         except Exception:
             self.handleError(record)
-        finally:
-            self.lock.release()
+        # finally:
+        #     self.lock.release()
 
     def format(self, record):
         record.message = record.getMessage()
@@ -54,17 +99,14 @@ class LambdaStreamHandler(StreamHandler):
             if not record.exc_text:
                 record.exc_text = self.formatter.formatException(record.exc_info)
         record.stack_info = self.formatter.formatStack(record.stack_info)
-        # record._id = record.created
         return record.to_dict()
 
     def recycle_by_conditions(self, conditions):
         stream = self.stream
-        # client = self._open()
         stream.delete_many(filter=conditions)
 
     def get_count_by_db(self):
         stream = self.stream
-        # client = self._open()
         return stream.find().count()
 
     def find_many_and_delete(self, conditions):
@@ -81,12 +123,12 @@ class LambdaStreamHandler(StreamHandler):
 
 class TimedRotatingDBHandler(LambdaStreamHandler):
     """
-        基于时间做旋转
+        日志流输出 mongodb数据库，并基于时间做旋转
     """
 
     def __init__(self, name, host='localhost', port=27017, encoding=None, backup_count=5,
-                 date_format='%Y-%m-%d', formatrer=None, delay=False):
-        LambdaStreamHandler.__init__(self, name, host, port, encoding, )
+                 date_format='%Y-%m-%d', formatter=None, delay=False):
+        LambdaStreamHandler.__init__(self, name, host, port, encoding, formatter=formatter, delay=delay)
         self.date_format = date_format
         self.backup_time = backup_count * 24 * 60 * 60
         self._timestamp = self._get_timestamp()
@@ -115,14 +157,14 @@ class TimedRotatingDBHandler(LambdaStreamHandler):
 
 class NumberRotatingDBHandler(LambdaStreamHandler):
     """
-        基于记录的个数做旋转
+        日志流输出 mongodb数据库，并基于条数做旋转
     """
 
     def __init__(self, name, host='localhost', port=27017, encoding=None, backup_count=5000, recycle_count=None,
-                 delay=False):
+                 formatter=None, delay=False):
         self.backup_count = backup_count
         self.recycle_count = recycle_count or int(self.backup_count / 10)
-        LambdaStreamHandler.__init__(self, name, host, port, encoding, )
+        LambdaStreamHandler.__init__(self, name, host, port, encoding, formatter=formatter, delay=delay)
 
     def perform_rollover(self):
         conditions = {"count": self.recycle_count}
@@ -135,7 +177,7 @@ class NumberRotatingDBHandler(LambdaStreamHandler):
 
 
 if __name__ == '__main__':
-    myclient = pymongo.MongoClient("mongodb://10.1.11.143:27017/")
+    myclient = pymongo.MongoClient("mongodb://:27017/")
     dblist = myclient.list_database_names()
     mydb = myclient["lambdalog"]
     mycol = mydb["req"]
