@@ -6,7 +6,7 @@ from LambdaLog import LogHandlerFactory
 
 import logging
 
-HOST = "10.1.11.143"
+HOST = ""
 PORT = 27017
 logger = logging.getLogger(name="req")
 logger.setLevel("INFO")
